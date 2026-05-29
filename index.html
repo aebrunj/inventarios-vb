@@ -778,7 +778,9 @@ function initFirebase() {
     var cs = document.getElementById('cloud-status');
     if (cs) { cs.textContent = '☁ Conectado'; cs.className = 'cloud-status connected'; }
     // Recargar inventarios si ya está logueado
-    if (state && state.user) escucharInventarios();
+    if (state && state.user && state.userRole) {
+      escucharInventarios();
+    }
   } catch(e) {
     console.error('Firebase error:', e);
     setTimeout(initFirebase, 1000);
@@ -1396,8 +1398,20 @@ function enterApp() {
     setCloudStatus('syncing');
     escucharInventarios();
   } else {
-    setCloudStatus('disconnected');
-    toast('Sin conexión a la nube');
+    setCloudStatus('syncing');
+    // Firebase todavía cargando — reintentar hasta que esté listo
+    var intentos = 0;
+    var waitFirebase = setInterval(function() {
+      intentos++;
+      if (firebaseReady) {
+        clearInterval(waitFirebase);
+        escucharInventarios();
+      } else if (intentos > 20) {
+        clearInterval(waitFirebase);
+        setCloudStatus('disconnected');
+        toast('Sin conexión a la nube');
+      }
+    }, 500);
   }
 }
 
